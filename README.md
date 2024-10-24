@@ -62,30 +62,30 @@ The resulting CSV file (yc_companies_data.csv) will contain all the company data
 ## CSV Structure
 - The CSV file will have the following column structure:
 
-name: Company name
-one_liner: Short company description
-website: Company website URL
-long_description: Full description of the company
-mission: Company mission statement
-key_details.batch_name: Y Combinator batch name
-key_details.year_founded: Year the company was founded
-key_details.team_size: Team size
-key_details.location: Location of the company
-key_details.city: City where the company is located
-key_details.country: Country of the company
-social_media.linkedin: LinkedIn URL
-social_media.twitter: Twitter URL
-social_media.facebook: Facebook URL
-social_media.crunchbase: Crunchbase URL
-founder_1_name, founder_1_title, founder_1_bio, founder_1_twitter, founder_1_linkedin: Details of the first founder
-founder_2_name, founder_2_title, founder_2_bio, founder_2_twitter, founder_2_linkedin: Details of the second founder
-(and so on for more founders up to a specified number)
+- name: Company name
+- one_liner: Short company description
+- website: Company website URL
+- long_description: Full description of the company
+- mission: Company mission statement
+- key_details.batch_name: Y Combinator batch name
+- key_details.year_founded: Year the company was founded
+- key_details.team_size: Team size
+- key_details.location: Location of the company
+- key_details.city: City where the company is located
+- key_details.country: Country of the company
+- social_media.linkedin: LinkedIn URL
+- social_media.twitter: Twitter URL
+- social_media.facebook: Facebook URL
+- social_media.crunchbase: Crunchbase URL
+- founder_1_name, founder_1_title, founder_1_bio, founder_1_twitter, founder_1_linkedin: Details of the first founder
+- founder_2_name, founder_2_title, founder_2_bio, founder_2_twitter, founder_2_linkedin: Details of the second founder
+- (and so on for more founders up to a specified number)
 
-##Customization
+## Customization
 - Max Founders: You can customize the maximum number of founders stored by modifying the MAX_FOUNDERS variable in the Python script.
 - Sleep Time: The delay between requests in the Python scraper is set to 1 second to avoid overwhelming the server. You can adjust the time.sleep(1) call in the script as needed.
 
-##Future Improvements
+## Future Improvements
 - Add error handling for potential edge cases.
 - Implement database storage (e.g., PostgreSQL) for scalable querying and better integration.
 - Automate the entire scraping and conversion process into a streamlined pipeline.
