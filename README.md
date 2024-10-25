@@ -56,8 +56,8 @@ The Python script can also convert the JSON data into a CSV file:
 
 ```bash
 python json_to_csv.py
-The resulting CSV file (yc_companies_data.csv) will contain all the company data, including founder information in separate columns (e.g., founder_1_name, founder_1_twitter).
 ```
+The resulting CSV file (yc_companies_data.csv) will contain all the company data, including founder information in separate columns (e.g., founder_1_name, founder_1_twitter).
 
 ## CSV Structure
 - The CSV file will have the following column structure:
