@@ -19,7 +19,7 @@ This project is a web scraping utility designed to extract detailed information 
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/yc-companies-scraper.git
+git clone https://github.com/akhan2000/YC-Scraper
 cd yc-companies-scraper
 npm install puppeteer
 pip install requests beautifulsoup4 tqdm
