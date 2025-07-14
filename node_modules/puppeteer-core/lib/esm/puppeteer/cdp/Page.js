@@ -31,17 +31,22 @@ var __disposeResources = (this && this.__disposeResources) || (function (Suppres
             env.error = env.hasError ? new SuppressedError(e, env.error, "An error was suppressed during disposal.") : e;
             env.hasError = true;
         }
+        var r, s = 0;
         function next() {
-            while (env.stack.length) {
-                var rec = env.stack.pop();
+            while (r = env.stack.pop()) {
                 try {
-                    var result = rec.dispose && rec.dispose.call(rec.value);
-                    if (rec.async) return Promise.resolve(result).then(next, function(e) { fail(e); return next(); });
+                    if (!r.async && s === 1) return s = 0, env.stack.push(r), Promise.resolve().then(next);
+                    if (r.dispose) {
+                        var result = r.dispose.call(r.value);
+                        if (r.async) return s |= 2, Promise.resolve(result).then(next, function(e) { fail(e); return next(); });
+                    }
+                    else s |= 1;
                 }
                 catch (e) {
                     fail(e);
                 }
             }
+            if (s === 1) return env.hasError ? Promise.reject(env.error) : Promise.resolve();
             if (env.hasError) throw env.error;
         }
         return next();
@@ -435,6 +440,9 @@ export class CdpPage extends Page {
     getDefaultTimeout() {
         return this._timeoutSettings.timeout();
     }
+    getDefaultNavigationTimeout() {
+        return this._timeoutSettings.navigationTimeout();
+    }
     async queryObjects(prototypeHandle) {
         assert(!prototypeHandle.disposed, 'Prototype JSHandle is disposed!');
         assert(prototypeHandle.id, 'Prototype JSHandle must not be referencing primitive value');
@@ -472,11 +480,7 @@ export class CdpPage extends Page {
         for (const cookie of cookies) {
             const item = {
                 ...cookie,
-                // TODO: a breaking change neeeded to change the partition key
-                // type in Puppeteer.
-                partitionKey: cookie.partitionKey
-                    ? { topLevelSite: cookie.partitionKey, hasCrossSiteAncestor: false }
-                    : undefined,
+                partitionKey: convertCookiesPartitionKeyFromPuppeteerToCdp(cookie.partitionKey),
             };
             if (!cookie.url && pageURL.startsWith('http')) {
                 item.url = pageURL;
@@ -513,20 +517,15 @@ export class CdpPage extends Page {
                 cookies: items.map(cookieParam => {
                     return {
                         ...cookieParam,
-                        partitionKey: cookieParam.partitionKey
-                            ? {
-                                // TODO: a breaking change neeeded to change the partition key
-                                // type in Puppeteer.
-                                topLevelSite: cookieParam.partitionKey,
-                                hasCrossSiteAncestor: false,
-                            }
-                            : undefined,
+                        partitionKey: convertCookiesPartitionKeyFromPuppeteerToCdp(cookieParam.partitionKey),
                     };
                 }),
             });
         }
     }
-    async exposeFunction(name, pptrFunction) {
+    async exposeFunction(name, 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+    pptrFunction) {
         if (this.#bindings.has(name)) {
             throw new Error(`Failed to add page binding with name ${name}: window['${name}'] already exists!`);
         }
@@ -878,7 +877,7 @@ export class CdpPage extends Page {
      *   page.click('#connect-bluetooth'),
      * ]);
      * await devicePrompt.select(
-     *   await devicePrompt.waitForDevice(({name}) => name.includes('My Device'))
+     *   await devicePrompt.waitForDevice(({name}) => name.includes('My Device')),
      * );
      * ```
      */
@@ -911,6 +910,21 @@ function getIntersectionRect(clip, viewport) {
         y,
         width: Math.max(Math.min(clip.x + clip.width, viewport.x + viewport.width) - x, 0),
         height: Math.max(Math.min(clip.y + clip.height, viewport.y + viewport.height) - y, 0),
+    };
+}
+export function convertCookiesPartitionKeyFromPuppeteerToCdp(partitionKey) {
+    if (partitionKey === undefined) {
+        return undefined;
+    }
+    if (typeof partitionKey === 'string') {
+        return {
+            topLevelSite: partitionKey,
+            hasCrossSiteAncestor: false,
+        };
+    }
+    return {
+        topLevelSite: partitionKey.sourceOrigin,
+        hasCrossSiteAncestor: partitionKey.hasCrossSiteAncestor ?? false,
     };
 }
 //# sourceMappingURL=Page.js.map

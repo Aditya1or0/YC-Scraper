@@ -9,11 +9,13 @@ const fs = require('fs');
   await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)');
 
   try {
-    console.log('Navigating to Y Combinator Companies Directory...');
-    await page.goto('https://www.ycombinator.com/companies', { waitUntil: 'networkidle2', timeout: 60000 });
+    const targetUrl = 'https://www.ycombinator.com/companies?batch=Summer%202025&batch=Spring%202025&batch=Winter%202025&batch=Fall%202024&batch=Summer%202024&batch=Winter%202024&industry=Healthcare&industry=Engineering%2C%20Product%20and%20Design&regions=United%20States%20of%20America&regions=United%20Kingdom&regions=France';
 
-    // Scroll to the bottom to ensure all companies are loaded
-    console.log('Scrolling through the companies directory...');
+    console.log('Navigating to filtered Y Combinator Companies Directory...');
+    await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
+
+    // Scroll through the entire list to load all companies
+    console.log('Scrolling through the filtered companies directory...');
     await autoScroll(page);
 
     // Extract all unique company links
@@ -21,15 +23,17 @@ const fs = require('fs');
       const linkElements = Array.from(document.querySelectorAll('a[href^="/companies/"]'));
       const links = linkElements
         .map(el => el.href)
-        .filter((href, index, self) => self.indexOf(href) === index && !href.includes('/companies/founders')); // Exclude non-company links
+        .filter((href, index, self) =>
+          self.indexOf(href) === index && !href.includes('/companies/founders')
+        ); // Exclude non-company links
       return links;
     });
 
-    console.log(`Found ${companyLinks.length} companies.`);
+    console.log(`Found ${companyLinks.length} filtered companies.`);
 
     // Save the company URLs to a JSON file
-    fs.writeFileSync('company_urls.json', JSON.stringify(companyLinks, null, 2));
-    console.log('Company URLs have been saved to "company_urls.json".');
+    fs.writeFileSync('filtered_company_urls.json', JSON.stringify(companyLinks, null, 2));
+    console.log('Filtered company URLs have been saved to "filtered_company_urls.json".');
 
   } catch (error) {
     console.error('Error during Puppeteer execution:', error);
@@ -39,21 +43,21 @@ const fs = require('fs');
 })();
 
 // Function to auto-scroll the page to the bottom
-async function autoScroll(page){
-    await page.evaluate(async () => {
-        await new Promise((resolve, reject) => {
-            let totalHeight = 0;
-            const distance = 100;
-            const timer = setInterval(() => {
-                const scrollHeight = document.body.scrollHeight;
-                window.scrollBy(0, distance);
-                totalHeight += distance;
+async function autoScroll(page) {
+  await page.evaluate(async () => {
+    await new Promise((resolve) => {
+      let totalHeight = 0;
+      const distance = 100;
+      const timer = setInterval(() => {
+        const scrollHeight = document.body.scrollHeight;
+        window.scrollBy(0, distance);
+        totalHeight += distance;
 
-                if(totalHeight >= scrollHeight - window.innerHeight){
-                    clearInterval(timer);
-                    resolve();
-                }
-            }, 100);
-        });
+        if (totalHeight >= scrollHeight - window.innerHeight) {
+          clearInterval(timer);
+          resolve();
+        }
+      }, 100);
     });
+  });
 }

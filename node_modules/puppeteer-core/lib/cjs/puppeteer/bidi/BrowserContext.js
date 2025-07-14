@@ -66,17 +66,22 @@ var __disposeResources = (this && this.__disposeResources) || (function (Suppres
             env.error = env.hasError ? new SuppressedError(e, env.error, "An error was suppressed during disposal.") : e;
             env.hasError = true;
         }
+        var r, s = 0;
         function next() {
-            while (env.stack.length) {
-                var rec = env.stack.pop();
+            while (r = env.stack.pop()) {
                 try {
-                    var result = rec.dispose && rec.dispose.call(rec.value);
-                    if (rec.async) return Promise.resolve(result).then(next, function(e) { fail(e); return next(); });
+                    if (!r.async && s === 1) return s = 0, env.stack.push(r), Promise.resolve().then(next);
+                    if (r.dispose) {
+                        var result = r.dispose.call(r.value);
+                        if (r.async) return s |= 2, Promise.resolve(result).then(next, function(e) { fail(e); return next(); });
+                    }
+                    else s |= 1;
                 }
                 catch (e) {
                     fail(e);
                 }
             }
+            if (s === 1) return env.hasError ? Promise.reject(env.error) : Promise.resolve();
             if (env.hasError) throw env.error;
         }
         return next();
@@ -142,17 +147,15 @@ let BidiBrowserContext = (() => {
                 const page = this.#createPage(browsingContext);
                 // We need to wait for the DOMContentLoaded as the
                 // browsingContext still may be navigating from the about:blank
-                browsingContext.once('DOMContentLoaded', () => {
-                    if (browsingContext.originalOpener) {
-                        for (const context of this.userContext.browsingContexts) {
-                            if (context.id === browsingContext.originalOpener) {
-                                this.#pages
-                                    .get(context)
-                                    .trustedEmitter.emit("popup" /* PageEvent.Popup */, page);
-                            }
+                if (browsingContext.originalOpener) {
+                    for (const context of this.userContext.browsingContexts) {
+                        if (context.id === browsingContext.originalOpener) {
+                            this.#pages
+                                .get(context)
+                                .trustedEmitter.emit("popup" /* PageEvent.Popup */, page);
                         }
                     }
-                });
+                }
             });
             this.userContext.on('closed', () => {
                 this.trustedEmitter.removeAllListeners();
@@ -306,6 +309,34 @@ let BidiBrowserContext = (() => {
                 return undefined;
             }
             return this.userContext.id;
+        }
+        async cookies() {
+            const cookies = await this.userContext.getCookies();
+            return cookies.map(cookie => {
+                return (0, Page_js_1.bidiToPuppeteerCookie)(cookie, true);
+            });
+        }
+        async setCookie(...cookies) {
+            await Promise.all(cookies.map(async (cookie) => {
+                const bidiCookie = {
+                    domain: cookie.domain,
+                    name: cookie.name,
+                    value: {
+                        type: 'string',
+                        value: cookie.value,
+                    },
+                    ...(cookie.path !== undefined ? { path: cookie.path } : {}),
+                    ...(cookie.httpOnly !== undefined ? { httpOnly: cookie.httpOnly } : {}),
+                    ...(cookie.secure !== undefined ? { secure: cookie.secure } : {}),
+                    ...(cookie.sameSite !== undefined
+                        ? { sameSite: (0, Page_js_1.convertCookiesSameSiteCdpToBiDi)(cookie.sameSite) }
+                        : {}),
+                    ...{ expiry: (0, Page_js_1.convertCookiesExpiryCdpToBiDi)(cookie.expires) },
+                    // Chrome-specific properties.
+                    ...(0, Page_js_1.cdpSpecificCookiePropertiesFromPuppeteerToBidi)(cookie, 'sameParty', 'sourceScheme', 'priority', 'url'),
+                };
+                return await this.userContext.setCookie(bidiCookie, (0, Page_js_1.convertCookiesPartitionKeyFromPuppeteerToBiDi)(cookie.partitionKey));
+            }));
         }
     };
 })();
